@@ -1,0 +1,21 @@
+# The repository manifest (Feature Flow docs/07 section 4), read by the engine at each step.
+api_version: feature-flow/v1
+kind: repository
+
+# The SDK the repository needs. The engine does not build its sandbox from this yet, and the
+# current sandbox image has no .NET SDK, so the unit tier runs in CI and there are no setup commands.
+environment:
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  os: linux
+  docker: false
+
+test_tiers:
+  - name: unit
+    tags: [unit]
+    command: dotnet test tests/FeatureFlow.Example.Client.UnitTests --filter Category=unit --logger trx --results-directory artifacts
+    result: { format: trx, path: "artifacts/*.trx" }
+    targets: [ci]
+    ci: { job: unit.yml }
+
+static_analysis:
+  analyser: none

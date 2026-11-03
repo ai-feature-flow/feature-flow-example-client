@@ -1,0 +1,37 @@
+name: unit
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Commit to test
+        required: true
+        type: string
+      idempotency_key:
+        description: Engine idempotency key
+        required: false
+        type: string
+  push:
+    branches: [ main, "ff/**" ]
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha || github.sha }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Run unit tier
+        run: dotnet test tests/FeatureFlow.Example.Client.UnitTests --filter Category=unit --logger trx --results-directory artifacts
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-results
+          path: artifacts/
