@@ -53,4 +53,13 @@ public sealed class WidgetClient
         var widget = await response.Content.ReadFromJsonAsync<Widget>(JsonOptions, cancellationToken);
         return widget ?? throw new InvalidOperationException("The API returned an empty widget.");
     }
+
+    /// <summary><c>GET /widgets/count</c>: the number of widgets. Throws when the API gives no count.</summary>
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("widgets/count", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<WidgetCountResponse>(JsonOptions, cancellationToken);
+        return body?.Count ?? throw new InvalidOperationException("The API returned no widget count.");
+    }
 }
