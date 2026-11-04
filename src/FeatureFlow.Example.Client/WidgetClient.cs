@@ -59,7 +59,15 @@ public sealed class WidgetClient
     {
         using var response = await _http.GetAsync("widgets/count", cancellationToken);
         response.EnsureSuccessStatusCode();
-        var count = await response.Content.ReadFromJsonAsync<CountResponse>(JsonOptions, cancellationToken);
+        // Read the body as text first: ReadFromJsonAsync throws JsonException on an empty body,
+        // which is not the InvalidOperationException this method documents for an empty response.
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            throw new InvalidOperationException("The API returned an empty count.");
+        }
+
+        var count = JsonSerializer.Deserialize<CountResponse>(body, JsonOptions);
         return (count ?? throw new InvalidOperationException("The API returned an empty count.")).Count;
     }
 
