@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using FeatureFlow.Example.Client;
 using Xunit;
 
@@ -49,6 +50,50 @@ public sealed class WidgetClientTests
         Assert.Equal("http://example.test/widgets", handler.Request.RequestUri!.ToString());
         Assert.Equal("""{"name":"delta"}""", handler.RequestBody);
         Assert.Equal(new Widget(3, "delta"), widget);
+    }
+
+    [Fact]
+    public async Task Count_gets_the_count_from_the_api()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, """{"count":5}""");
+
+        var count = await handler.CreateClient().CountAsync();
+
+        Assert.Equal(HttpMethod.Get, handler.Request!.Method);
+        Assert.Equal("http://example.test/widgets/count", handler.Request.RequestUri!.ToString());
+        Assert.Equal(5, count);
+    }
+
+    [Fact]
+    public async Task Count_throws_when_the_api_fails()
+    {
+        var handler = new FakeHandler(HttpStatusCode.InternalServerError);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_rather_than_returning_a_value_when_the_count_endpoint_is_not_found()
+    {
+        var handler = new FakeHandler(HttpStatusCode.NotFound);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_when_the_body_has_no_count()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, "{}");
+
+        await Assert.ThrowsAsync<JsonException>(() => handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_when_the_body_is_null()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, "null");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.CreateClient().CountAsync());
     }
 
     [Fact]

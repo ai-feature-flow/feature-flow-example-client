@@ -42,6 +42,24 @@ public sealed class WidgetClient
         return await response.Content.ReadFromJsonAsync<Widget>(JsonOptions, cancellationToken);
     }
 
+    /// <summary>
+    /// <c>GET /widgets/count</c>: the number of widgets. Any non-success status throws
+    /// <see cref="HttpRequestException"/>, including 404; a body without an integer <c>count</c>
+    /// throws <see cref="JsonException"/>, and a JSON <c>null</c> body throws <see cref="InvalidOperationException"/>.
+    /// </summary>
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("widgets/count", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<WidgetCountResponse>(JsonOptions, cancellationToken);
+        if (body is null)
+        {
+            throw new InvalidOperationException("The API returned an empty count.");
+        }
+
+        return body.Count;
+    }
+
     /// <summary><c>POST /widgets</c>: adds a widget and returns it with its assigned id.</summary>
     public async Task<Widget> AddAsync(string name, CancellationToken cancellationToken = default)
     {
