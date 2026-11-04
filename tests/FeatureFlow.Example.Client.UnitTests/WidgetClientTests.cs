@@ -67,4 +67,57 @@ public sealed class WidgetClientTests
 
         await Assert.ThrowsAsync<HttpRequestException>(() => handler.CreateClient().AddAsync("x"));
     }
+
+    [Fact]
+    public async Task Count_gets_the_count_from_the_api_as_an_int()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, """{"count":5}""");
+
+        var count = await handler.CreateClient().CountAsync();
+
+        Assert.Equal(HttpMethod.Get, handler.Request!.Method);
+        Assert.Equal("http://example.test/widgets/count", handler.Request.RequestUri!.ToString());
+        Assert.Null(handler.RequestBody);
+        Assert.Equal(5, count);
+    }
+
+    [Fact]
+    public async Task Count_returns_zero_when_the_api_counts_none()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, """{"count":0}""");
+
+        Assert.Equal(0, await handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_for_not_found()
+    {
+        var handler = new FakeHandler(HttpStatusCode.NotFound);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_for_a_server_error()
+    {
+        var handler = new FakeHandler(HttpStatusCode.InternalServerError, """{"error":"boom"}""");
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_when_the_body_has_no_count()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, """{"total":5}""");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_when_the_body_is_null()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, "null");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.CreateClient().CountAsync());
+    }
 }
