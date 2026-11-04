@@ -67,4 +67,66 @@ public sealed class WidgetClientTests
 
         await Assert.ThrowsAsync<HttpRequestException>(() => handler.CreateClient().AddAsync("x"));
     }
+
+    [Fact]
+    public async Task Count_sends_a_get_to_the_count_route()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, """{"count":5}""");
+
+        await handler.CreateClient().CountAsync();
+
+        Assert.Equal(HttpMethod.Get, handler.Request!.Method);
+        Assert.Equal("http://example.test/widgets/count", handler.Request.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Count_returns_the_reported_count()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, """{"count":5}""");
+
+        Assert.Equal(5, await handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_returns_zero_for_an_empty_store()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, """{"count":0}""");
+
+        Assert.Equal(0, await handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_http_exception_when_the_api_rejects_the_request()
+    {
+        var handler = new FakeHandler(HttpStatusCode.NotFound);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_invalid_operation_for_an_empty_body()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, "");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_invalid_operation_for_a_null_body()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, "null");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.CreateClient().CountAsync());
+    }
+
+    [Fact]
+    public async Task Count_throws_operation_canceled_when_the_call_is_cancelled()
+    {
+        var handler = new FakeHandler(HttpStatusCode.OK, """{"count":5}""");
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // HttpClient may surface a cancelled call as TaskCanceledException, a subclass, so accept the base type.
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => handler.CreateClient().CountAsync(cts.Token));
+    }
 }

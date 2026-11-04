@@ -53,4 +53,24 @@ public sealed class WidgetClient
         var widget = await response.Content.ReadFromJsonAsync<Widget>(JsonOptions, cancellationToken);
         return widget ?? throw new InvalidOperationException("The API returned an empty widget.");
     }
+
+    /// <summary><c>GET /widgets/count</c>: the number of widgets in the store. An empty store reports 0.</summary>
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("widgets/count", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        // Read the body as text first: ReadFromJsonAsync throws JsonException on an empty body,
+        // which is not the InvalidOperationException this method documents for an empty response.
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            throw new InvalidOperationException("The API returned an empty count.");
+        }
+
+        var count = JsonSerializer.Deserialize<CountResponse>(body, JsonOptions);
+        return (count ?? throw new InvalidOperationException("The API returned an empty count.")).Count;
+    }
+
+    /// <summary>The body of <c>GET /widgets/count</c>: <c>{ "count": 5 }</c>. Internal to the client.</summary>
+    private sealed record CountResponse(int Count);
 }
